@@ -1,0 +1,22 @@
+node
+{
+    stage('Git clone del branch develop'){
+        git(credentialsId: 'git-cred', url: 'https://gitlab.puertos.es/medio-fisico/portussvr.git',branch: 'develop')
+    }
+    stage('Configurar variables PRE'){
+        sh label: '', script: 'cp -fp src/main/resources/application.properties.pre src/main/resources/application.properties'
+    }
+    stage('Creación archivo WAR'){
+        sh label: '', script: 'mvn clean compile package'
+    } 
+    stage('Backup del WAR actual'){
+        sh label: '', script: 'ssh neumann "sudo cp -pf /srv/portussvr/catalina/portussvr/webapps/portussvr.war /backup/portussvr/"'
+    }
+    stage('Envio WAR a servidor destino y cambio de owner de este'){
+        sh label: '', script: 'scp /opt/jenkins_home/workspace/Portus/portus_server_pre/target/portus-0.0.1-SNAPSHOT.war neumann:/home/jenkins && ssh neumann "sudo chown portussvr:tomcat /home/jenkins/portus-0.0.1-SNAPSHOT.war"'
+    }
+    stage('Despliegue WAR'){
+        sh label: '', script: 'ssh neumann "sudo /bin/systemctl stop portussvr && sudo rm -rf /srv/portussvr/catalina/portussvr/webapps/portussvr && sudo rm -f /srv/portussvr/catalina/portussvr/webapps/portussvr.war && sudo mv /home/jenkins/portus-0.0.1-SNAPSHOT.war /srv/portussvr/catalina/portussvr/webapps/portussvr.war && sudo /bin/systemctl start portussvr"'
+    }
+    
+}
